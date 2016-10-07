@@ -1,0 +1,780 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+
+    <title>Mesos-Marathon cloud</title>
+
+    <meta name="description" content="Mesos-Marathon cloud">
+    <meta name="author" content="Jan Seidl">
+
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui">
+
+    <link rel="stylesheet" href="css/reveal.css">
+    <link rel="stylesheet" href="css/theme/black.css" id="theme">
+
+    <!-- Code syntax highlighting -->
+    <link rel="stylesheet" href="lib/css/zenburn.css">
+
+    <!-- Printing and PDF exports -->
+    <script>
+      var link = document.createElement( 'link' );
+      link.rel = 'stylesheet';
+      link.type = 'text/css';
+      link.href = window.location.search.match( /print-pdf/gi ) ? 'css/print/pdf.css' : 'css/print/paper.css';
+      document.getElementsByTagName( 'head' )[0].appendChild( link );
+    </script>
+
+    <!--[if lt IE 9]>
+    <script src="lib/js/html5shiv.js"></script>
+    <![endif]-->
+  </head>
+
+  <body>
+
+    <div class="reveal">
+
+      <!-- Any section element inside of this container is displayed as a slide -->
+      <div class="slides">
+        <section>
+          <h1>Mesos-Marathon cloud</h1>
+          <p>
+            <small>Jan Seidl &lt;seidl@avast.com&gt;, VirusLab Systems</small>
+          </p>
+
+          <aside class="notes">
+            <ul>
+              <li>predstavit se</li>
+              <li>v 1minute popsat co delame</li>
+              <li>vysvetlit, ze budu mluvit o sobe, ale je to zasluha vsech lidi z teamu = zasluhu timto prebiram na sebe</li>
+            </ul>
+          </aside>
+        </section>
+
+        <section>
+          <h2>Docker?</h2>
+
+          <aside class="notes">
+            <ul>
+              <li>poprve pred 1 a 3/4 rokem</li>
+              <li>jak jsem docker nechtel</li>
+              <li>proc se mi zalibil (pinto)</li>
+              <li>jenze, pak jsem zacal chtit nejaky cloud do ktere ho to dam</li>
+            </ul>
+          </aside>
+        </section>
+
+        <section>
+          <section>
+            <h2>Cloud?</h2>
+
+            <aside class="notes">
+              <ul>
+                <li>externi sluzby jsem neanalyzoval, protoze to u nas nefrcelo a protoze mame velky prenos dat az Terabyty denne</li>
+                <li>nejdriv jsem dlouho zkoumal openstack - moloch, to fakt neni to co potrebujeme</li>
+              </ul>
+            </aside>
+          </section>
+          <section>
+            <h2>Cloud?</h2>
+            <p>
+              swarm / helios / kubernetes (beta) / mesos-marathon
+            </p>
+
+            <aside class="notes">
+              <ul>
+                <li>swarm byl jen ve zminkach</li>
+                <li>helios byl slozity (ale mocny), doporucovali jen kdyz si clovek nevystavi s ostatnimi</li>
+                <li>kubernetes - v bete, nedoporucovali na produkci</li>
+                <li>mesos je stable, marathon novinka, ale API vypadalo nadejne a mesos je stable</li>
+              </ul>
+            </aside>
+          </section>
+        </section>
+
+        <section>
+          <h2>Mesos-Marathon cloud</h2>
+
+          <aside class="notes">
+            vyvestlit co je mesos a co marathon, jak do toho zapada zookeeper</br>
+						mesosphere
+          </aside>
+        </section>
+
+        <section>
+          <section>
+            <h2>mmcloud v4</h2>
+            <p>
+              <ul>
+                <li>mesos</li>
+                <li>marathon</li>
+                <li>(zookeeper)</li>
+                <li style="color:green">marathon-lb</li>
+              </ul>
+            </p>
+          	<aside class="notes">
+          	</aside>
+          </section>
+
+          <section>
+            <img data-src="img/mesos-marathon_cloud.png" alt="orchestration tag cloud">
+          </section>
+
+          <section>
+            <ul>
+              <h4>pluses</h4>
+              <ul>
+                <li>immediate propagation</li>
+                <li>name(s) (vhost(s))</li>
+                <li>HTTP/TCP</li>
+                <li>support multiport application</li>
+              </ul>
+              <br />
+              <h4>minuses</h4>
+              <ul>
+                <li style="color:red">http2</li>
+              </ul>
+            </ul>
+          </section>
+
+          <section>
+            <h3>HA</h3>
+            <ul>
+                virtual IP + VRRP
+                <ul>
+                    <li>keepalived</li>
+                    <li>piranha (RedHat)</li>
+                    <li>ultramonkey</li>
+                    <li>DCOS?</li>
+                </ul>
+            </ul>
+
+            <aside class="notes">
+              dlouho jsem nechapal jak udelat HA, az kdyz jsem se dozvedel ze existuje neco jako virtual ip<br/>
+              VRRP - virutal router redundancy protocol<br />
+              my pouzivame F5 od F5 Networks<br />
+              ale chceme prejit na vlastni haproxy
+            </aside>
+          </section>
+        </section>
+
+        <section>
+          <section data-markdown>
+            <script type="text/template">
+##Nice, how can use it?
+* GUI
+* REST API
+* (deployer)
+            </script>
+          </section>
+          <section data-markdown>
+            <script type="text/template">
+###GUI
+![marathon gui create application](img/marathon_gui_create.png)
+
+Note:
+  https://hub.docker.com/r/jenkinsci/jenkins/tags/
+            </script>
+          </section>
+          <section data-markdown>
+            <script type="text/template">
+###marathon.json
+```perl
+{
+  "id": "/test/app",
+  "instances": 1,
+  "cpus": 1,
+  "mem": 1024,
+  "container": {
+    "docker": {
+      "type": "DOCKER",
+      "image": "docker.int.avast.com/nejaka_image:0.1.0",
+      "network": "BRIDGE",
+      "portMappings": [
+        {
+          "containerPort": 8080,
+          "hostPort": 0,
+          "protocol": "tcp",
+          "servicePort": 12345
+        }
+      ]
+		}
+	}
+}
+```
+            </script>
+          </section>
+          <section data-markdown>
+            <script type="text/template">
+###marathon.json - labels
+```perl
+{
+  "id": "/test/app",
+  "labels": {
+    "HAPROXY_0_VHOST": "app-test.whale.int.avast.com",
+    "HAPROXY_GROUP": "internal"
+  },
+  "instances": 1,
+  "cpus": 1,
+  "mem": 1024,
+  "container": {
+    "docker": {
+      "type": "DOCKER",
+      "image": "docker.int.avast.com/nejaka_image:0.1.0",
+      "network": "BRIDGE",
+      "portMappings": [
+        {
+          "containerPort": 8080,
+          "protocol": "tcp",
+        }
+      ]
+		}
+	}
+}
+```
+
+Note:
+Tady je videt jak definovat vhosty
+cislo znaci port (index)
+grupa internal/external
+            </script>
+          </section>
+          <section data-markdown>
+            <script type="text/template">
+###REST API
+####new app
+```perl
+curl -H "Content-Type: application/json" \
+  -X POST -d @marathon.json <hosturl>/marathon/v2/apps
+```
+
+####update</h4>
+```perl
+curl -H "Content-Type: application/json" \
+  -X PUT -d @marathon.json <hosturl>/marathon/v2/apps
+```
+            </script>
+          </section>
+          <section data-markdown>
+            <script type="text/template">
+###deployer
+[https://hub.docker.com/r/avastsoftware/marathon-deployer](https://hub.docker.com/r/avastsoftware/marathon-deployer)
+```bash
+  docker run \
+    -v $PWD/marathon.json:/marathon.json \
+    -e MARATHON_URL=marathon.whale.int.avast.com \
+    -e MARATHON_APPLICATION_NAME=/test/application \
+    avastsoftware/marathon-deployer
+```
+            </script>
+          </section>
+
+        </section>
+
+        <section data-markdown>
+					<script type="text/template">
+##App config in docker
+* ENV/options</li>
+* config layer</li>
+* k/v store</li>
+* mesos uris + mount</li>
+
+Note:
+	velice pravdepodobne budete resit jak konfigurovat sve applikace
+					</script>
+        </section>
+
+        <section>
+          <section data-markdown>
+            <script type="text/template">
+###ENV/options
+
+```bash
+$ docker run --rm \
+  -v $PWD:/usr/src/myapp \
+  -w /usr/src/myapp \
+  -e GOOS=windows -e GOARCH=386 \
+  golang:1.6 go build
+```
+
+```bash            
+$ docker run perl perl -E "say 'hello'"
+```
+            </script>
+          </section>
+          <section data-markdown>
+            <script type="text/template">
+###env - marathon.json
+```json
+{
+  "id": "/rabbitmq",
+  "instances": 1,
+  "cpus": 1,
+  "mem": 1024,
+  "env": {
+    "RABBITMQ_DEFAULT_USER": "test'
+  },
+  "container": {
+    "docker": {
+      "type": "DOCKER",
+      "image": "rabbitmq",
+      "network": "BRIDGE",
+      "portMappings": [
+        {"containerPort": 5672, "hostPort": 0, "protocol": "tcp", "servicePort": 0}
+      ]
+		}
+	}
+}
+```
+            </script>
+          </section>
+          <section data-markdown>
+            <script type="text/template">
+###options - marathon.json
+```json
+{
+  "id":  "hello-world-app",
+  "cmd": "perl -E \"say 'Hello world!'\""
+  ...
+}
+```
+
+means `/bin/sh -c ${app.cmd}`
+
+or 
+
+```json
+{
+  "id": "sleep-app",
+  "args": [
+    "sleep",
+    "100"
+  ],
+  ...
+}
+```
+
+Note:
+zepta se jestli lidi vedi rozdil mezi CMD a ENTRYPOINT(em)
+            </script>
+          </section>
+          <section data-markdown>
+            <script type="text/template">
+###ENTRYPOINT vs CMD
+
+```
+CMD ["executable","param1","param2"] (exec form, this is the preferred form)
+CMD ["param1","param2"] (as default parameters to ENTRYPOINT)
+CMD command param1 param2 (shell form)
+```
+
+[https://docs.docker.com/engine/reference/builder/#understand-how-cmd-and-entrypoint-interact](https://docs.docker.com/engine/reference/builder/#understand-how-cmd-and-entrypoint-interact)
+            </script>
+          </section>
+        </section>
+
+        <section data-markdown>
+          <script type="text/template">
+###config layer
+
+```
+FROM APP
+
+COPY config.json /etc/config.json
+ENV CONFIG_FILE=/etc/config.json
+```
+          </script>
+        </section>
+
+        <section>
+          <section data-markdown>
+            <script type="text/template">
+###k/v store
+
+* consul
+* etcd
+* ...
+            </script>
+          </section>
+          <section data-markdown>
+            <script type="text/template">
+####consul
+
+![consul kv](img/consul_kv.png)
+
+Note:
+
+ukazu consul, protoze ho mame, nicmene to podobne funguje i pro etcd
+            </script>
+          </section>
+        </section>
+
+        <section>
+          <section data-markdown>
+            <script type="text/template">
+###mesos uris + mount
+
+marathon.json
+```json
+"uris": [
+  "http://url"
+],
+...
+```
+            </script>
+          </section>
+          <section data-markdown>
+            <script type="text/template">
+####mesos stderr
+```
+Fetching URI 'http://url'
+Downloading resource from 'http://url' to '/home/mesos-slave/slaves/..../path'
+Copying instead of extracting resource from URI with 'extract' flag, because it does not seem to be an archive: http://url
+Fetched 'http://url' to '/home/mesos-slave/slaves/..../path'
+```
+            </script>
+          </section>
+          <section data-markdown>
+            <script type="text/template">
+```json
+"cmd": "app --conf $MESOS_SANDBOX/config.json"
+"uris": [
+  "http://url/config.json"
+],
+...
+```
+
+(`/bin/sh -c "app --conf $MESOS_SANDBOX/config.json`)
+            </script>
+          </section>
+          <section data-markdown>
+            <script type="text/template">
+####mesos ENV?
+```bash
+HOSTNAME=136fcb110e56
+SHLVL=1
+HOME=/root
+PORT=31686
+MESOS_CONTAINER_NAME=mesos-e79ecbc1-18be-4025-8981-136781ddfea8-S0.db7715f5-d37d-4cde-b4de-b3e8f8e3f93c
+MARATHON_APP_ID=/primary-storage-api
+PORTS=31686
+PORT0=31686
+MARATHON_APP_DOCKER_IMAGE=docker.int.avast.com/nejaka_image:0.1.0
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+MESOS_SANDBOX=/mnt/mesos/sandbox
+MARATHON_APP_RESOURCE_DISK=0.0
+MARATHON_APP_RESOURCE_MEM=256.0
+HOST=prg-whale-01.srv.int.avast.com
+MARATHON_APP_VERSION=2016-09-26T10:14:01.901Z
+MARATHON_APP_LABELS=HAPROXY_0_VHOST HAPROXY_GROUP
+MARATHON_APP_LABEL_HAPROXY_0_VHOST=app-test.whale.int.avast.com
+PWD=/
+PORT_8080=31686
+MESOS_TASK_ID=primary-storage-api.0896f3e9-83d2-11e6-bcc0-96c7320af534
+MARATHON_APP_RESOURCE_CPUS=0.1
+MARATHON_APP_LABEL_HAPROXY_GROUP=internal
+```
+            </script>
+          </section>
+        </section>
+
+        <section>
+          <section data-markdown>
+            <script type="text/template">
+##Real use case - Project phoenix
+
+![project phoenix](img/phoenix.png)
+
+Note:
+            </script>
+          </section>
+        </section>
+
+        <section data-markdown>
+          <script type="text/template">
+##Known problems
+* logging
+* monitoring
+* authentication
+* swap
+* OOM killer
+          </script>
+        </section>
+
+        <section>
+          <section data-markdown>
+            <script type="text/template">
+###logging
+
+Note:
+* nemuzeme se uplne dohodnout
+* puvodne jsme chteli logovat na screenu
+            </script>
+          </section>
+          <section data-markdown>
+            <script type="text/template">
+####GELF (JSON) to screen
+```json
+{"version": "1.1", "host": "example.org", "level": 3, "short_message": "...", "full_message": "...", ...}
+{"version": "1.1", "host": "example.org", "level": 6, "short_message": "...", "full_message": "...", ...}
+{"version": "1.1", "host": "example.org", "level": 4, "short_message": "...", "full_message": "...", ...}
+
+```
+
+Note:
+  Idea je, ze budeme logovat v nejakem json/gelf formatu per line a logstash bude tento vystup vycitat a posilat do graylogu
+  Jenze kazdy slusny jazyk ma jednoduchy logger, takze jestli tam bude kod na logovani rovnou do graylogu, nebo na screenu je prakticky jedno...
+  Jedina vyhoda je, ze by se (v pripade zmeny) graylog serveru menilo jen na jednom miste
+            </script>
+          </section>
+
+          <section data-markdown>
+            <script type="text/template">
+####logger configuration
+```json
+[
+  "Gelf",
+  "min_level", "info",
+  "additional_fields", {"facility": "phoenix", "component": "zorro"},
+  "socket", {
+    "host": "sealion.srv.int.avast.com",
+    "port": 12201,
+    "protocol": "udp",
+    "chunked": "lan",
+    "compress": true
+  }
+]
+```
+
+or
+
+```json
+[
+  "ScreenGelf",
+  "additional_fields", {"facility": "phoenix", "component": "zorro"},
+  "min_level", "debug",
+  "newline", 1
+]
+```
+            </script>
+          </section>
+        </section>
+
+        <section>
+          <section data-markdown>
+  					<script type="text/template">
+###monitoring
+
+* icinga
+* app -> statsite -> graphite (grafana) -> seyren (-> icinga)
+
+Note:
+mame monitoring jednotlivych applikaci
+
+mame monitoring marathonu
+
+chybi mi monitoring nodu - abych koukl a videl ze je neco spatne (napr. node na kterem se neplanuji tasky = spatne)
+			  		</script>
+          </section>
+
+          <section data-markdown>
+				  	<script type="text/template">
+###monitoring - nagios/icinga
+
+* `docker info` - data/metadata space check 
+* docker_container_size_check (https://github.com/avast/docker_container_size_check)
+* marathon-lb healtcheck
+
+Note:
+Tyhle vsechny checky vznikly z duvodu malo mista na FXach
+  					</script>
+          </section>
+        </section>
+
+        <section>
+          <section data-markdown>
+            <script type="text/template">
+###authentication
+            </script>
+          </section>
+          <section data-markdown>
+            <script type="text/template">
+####DCOS
+![DCOS authentication](img/dcos_auth.png)
+
+Note:
+* vysvetlit co to je DCOS
+* DCOS je ted OS
+            </script>
+          </section>
+        </section>
+
+        <section>
+          <section data-markdown>
+            <script type="text/template">
+###swap
+            </script>
+          </section>
+          <section data-markdown>
+            <script type="text/template">
+####memory limit - cgroups
+```bash
+[seidl@seinajoki-linux]~% docker run -m 16m centos:7 free -m
+              total        used        free      shared  buff/cache   available
+Mem:           3952         175        3536           0         239        3723
+Swap:          2047           0        2047
+```
+
+Note:
+  omezeni pameti se dela cgroupama a ty nejsou videt za pouziti klasickych prikazu
+da se to nekde vycist, ale standartni appky to nedelaji
+
+demo - stress
+v jednom terminalu htop, v druhym docker
+docker run stress --vm 1 --vm-bytes 1G --timeout 10
+docker run -m 1G stress --vm 1 --vm-bytes 2G --timeout 10 - tady zafunguje OOM killer
+docker run -m 1G stress --vm 1 --vm-bytes 1.5G --timeout 10
+            </script>
+          </section>
+          <section data-markdown>
+            <script type="text/template">
+####JVM
+![JVM htop](img/swap.png)
+
+Note:
+napr. JVM - ta si defaultne (pokud se neomezi) alokuje (max) 1/4 pameti
+
+z dokumentace:
+maximum heap size
+
+    Smaller of 1/4th of the physical memory or 1GB. Before J2SE 5.0, the default maximum heap size was 64MB. You can override this default using the -Xmx command-line option.
+
+            </script>
+          </section>
+        </section>
+
+        <section>
+          <section data-markdown>
+            <script type="text/template">
+###OOM killer
+
+```
+Sep 20 20:47:42 prg-whale-05 kernel: gen-2 invoked oom-killer: gfp_mask=0xd0, order=0, oom_score_adj=0
+Sep 20 20:47:42 prg-whale-05 kernel: gen-2 cpuset=docker-34afa49c3c47761f37b0474c675d1916ae057beb1f5d6d5c9ba93b109930881b.scope mems_allowed=0-1
+Sep 20 20:47:42 prg-whale-05 kernel: CPU: 20 PID: 133099 Comm: gen-2 Not tainted 3.10.0-327.28.3.el7.x86_64 #1
+Sep 20 20:47:42 prg-whale-05 kernel: Hardware name: Dell Inc. PowerEdge FC430/03X19K, BIOS 1.1.5 05/04/2015
+Sep 20 20:47:42 prg-whale-05 kernel: ffff880fcf3cae00 000000008e546cb8 ffff880a0db2fcd0 ffffffff81636453
+Sep 20 20:47:42 prg-whale-05 kernel: ffff880a0db2fd60 ffffffff816313f3 0000000000000046 ffff880fcd397300
+Sep 20 20:47:42 prg-whale-05 kernel: ffff880a0db2fd38 ffff880a0db2fd30 ffffffff8116cdb6 ffff880133d510e8
+Sep 20 20:47:42 prg-whale-05 kernel: Call Trace:
+Sep 20 20:47:42 prg-whale-05 kernel: [<ffffffff81636453>] dump_stack+0x19/0x1b
+Sep 20 20:47:42 prg-whale-05 kernel: [<ffffffff816313f3>] dump_header+0x8e/0x214
+Sep 20 20:47:42 prg-whale-05 kernel: [<ffffffff8116cdb6>] ? find_lock_task_mm+0x56/0xc0
+Sep 20 20:47:42 prg-whale-05 kernel: [<ffffffff8116d24e>] oom_kill_process+0x24e/0x3b0
+Sep 20 20:47:42 prg-whale-05 kernel: [<ffffffff81088dee>] ? has_capability_noaudit+0x1e/0x30
+Sep 20 20:47:42 prg-whale-05 kernel: [<ffffffff811d4195>] mem_cgroup_oom_synchronize+0x575/0x5a0
+Sep 20 20:47:42 prg-whale-05 kernel: [<ffffffff811d3560>] ? mem_cgroup_charge_common+0xc0/0xc0
+Sep 20 20:47:42 prg-whale-05 kernel: [<ffffffff8116dac4>] pagefault_out_of_memory+0x14/0x90
+Sep 20 20:47:42 prg-whale-05 kernel: [<ffffffff8162f83c>] mm_fault_error+0x68/0x12b
+Sep 20 20:47:42 prg-whale-05 kernel: [<ffffffff816422c2>] __do_page_fault+0x3e2/0x450
+Sep 20 20:47:42 prg-whale-05 kernel: [<ffffffff81642353>] do_page_fault+0x23/0x80
+Sep 20 20:47:42 prg-whale-05 kernel: [<ffffffff8163e648>] page_fault+0x28/0x30
+Sep 20 20:47:42 prg-whale-05 kernel: Task in /system.slice/docker-34afa49c3c47761f37b0474c675d1916ae057beb1f5d6d5c9ba93b109930881b.scope killed as a result of limit of /system.slice/docker-34afa49c3c47761f37b0474c675d1916ae057beb1f5d6d5c9ba93b109930881b.scope
+Sep 20 20:47:42 prg-whale-05 kernel: memory: usage 1048576kB, limit 1048576kB, failcnt 1844368
+Sep 20 20:47:42 prg-whale-05 kernel: memory+swap: usage 1048576kB, limit 2097152kB, failcnt 0
+Sep 20 20:47:42 prg-whale-05 kernel: kmem: usage 0kB, limit 9007199254740991kB, failcnt 0
+Sep 20 20:47:42 prg-whale-05 kernel: Memory cgroup stats for /system.slice/docker-34afa49c3c47761f37b0474c675d1916ae057beb1f5d6d5c9ba93b109930881b.scope: cache:52KB rss:1048524KB rss_huge:0KB mapped_file:0KB swap:0KB inactive_anon:0KB active_anon:1048500KB inactive_file:0KB active_file:0KB unevictable:0KB
+Sep 20 20:47:42 prg-whale-05 kernel: [ pid ]   uid  tgid total_vm      rss nr_ptes swapents oom_score_adj name
+Sep 20 20:47:42 prg-whale-05 kernel: [62341]     0 62341    37198    11563      77        0             0 run_gen.pl
+Sep 20 20:47:42 prg-whale-05 kernel: [133098]     0 133098     1082       25       6        0             0 sh
+Sep 20 20:47:42 prg-whale-05 kernel: [133099]     0 133099   356557   250498     504        0             0 gen-2
+Sep 20 20:47:42 prg-whale-05 kernel: Memory cgroup out of memory: Kill process 133099 (gen-2) score 928 or sacrifice child
+Sep 20 20:47:42 prg-whale-05 kernel: Killed process 133099 (gen-2) total-vm:1426228kB, anon-rss:1001988kB, file-rss:4kB
+```
+
+Note:
+            </script>
+          </section>
+          <section data-markdown>
+            <script type="text/template">
+###OOM killer
+`W0920 10:15:19.298264 23211 logging.cpp:91] RAW: Received signal SIGTERM from process 1987 of user 0; exiting`
+
+![completed tasks](img/completed.png)
+
+            </script>
+          </section>
+        </section>
+
+        <section>
+          <section data-markdown>
+            <script type="text/template">
+##Conclusion
+            </script>
+          </section>
+
+          <section data-markdown>
+            <script type="text/template">
+##Conclusion
+
+* use docker
+* use docker
+* use docker
+* choose some cloud
+
+Note:
+pouzivejte docker a zbytek uz prijde sam
+
+pouzivejte docker a neverim ze by jste nechteli nejaky cloud kam budete svoje appky davat
+
+vyberte si jakykoliv cloud... to je jedno - kubernetes je hodne oblibeny, mesos-maraton funguje, docker swarm taky
+zkuste amazon, heroku,... proste je to jedno - to nejhorsi co se stane je, ze ten cloud zmenite, ale to je malo prace, protoze pouzivate docker!!!
+            </script>
+          </section>
+
+        </section>
+
+
+        <section>
+          <h2>Questions?</h2>
+        </section>
+      </div>
+
+    </div>
+
+    <script src="lib/js/head.min.js"></script>
+    <script src="js/reveal.js"></script>
+
+    <script>
+
+      // Full list of configuration options available at:
+      // https://github.com/hakimel/reveal.js#configuration
+      Reveal.initialize({
+        controls: true,
+        progress: true,
+        history: true,
+        center: true,
+
+        transition: 'slide', // none/fade/slide/convex/concave/zoom
+
+        // Optional reveal.js plugins
+        dependencies: [
+          { src: 'lib/js/classList.js', condition: function() { return !document.body.classList; } },
+          { src: 'plugin/markdown/marked.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+          { src: 'plugin/markdown/markdown.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+          { src: 'plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } },
+          { src: 'plugin/zoom-js/zoom.js', async: true },
+          { src: 'plugin/notes/notes.js', async: true }
+        ]
+      });
+
+    </script>
+
+  </body>
+</html>
+<!--
+vim: tabstop=2
+-->
